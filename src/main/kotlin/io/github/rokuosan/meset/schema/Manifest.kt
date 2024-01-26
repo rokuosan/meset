@@ -34,30 +34,33 @@ data class Config(
 
 @Serializable
 sealed class Task{
+    abstract val name: String?
+    abstract val dependsOn: List<String>?
+    abstract val prefix: String?
 
     @Serializable
     @SerialName("command")
     data class Command(
-        val name: String? = null,
+        override val name: String? = null,
 
         @SerialName("depends_on")
-        val dependsOn: List<String>? = null,
+        override val dependsOn: List<String>? = null,
 
         @SerialName("prefix")
-        val prefix: String? = null,
+        override val prefix: String? = null,
         val commands: List<String>,
     ) : Task()
 
     @Serializable
     @SerialName("file")
     data class File(
-        val name: String? = null,
+        override val name: String? = null,
 
         @SerialName("depends_on")
-        val dependsOn: List<String>? = null,
+        override val dependsOn: List<String>? = null,
 
         @SerialName("prefix")
-        val prefix: String? = null,
+        override val prefix: String? = null,
         val filename: String,
         val text: String,
     ) : Task()
