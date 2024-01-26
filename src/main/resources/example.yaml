@@ -1,0 +1,56 @@
+config:
+  workers: 4
+
+env:
+  - name: Binary
+    type: path
+    at: first
+    location: "%USERPROFILE%/meset"
+
+
+tasks:
+  - name: Setup Scoop
+    type: command
+    commands:
+      - Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+      - Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
+
+  - name: Add a Scoop bucket
+    type: command
+    depends_on:
+      - Setup Scoop
+    prefix: scoop bucket add
+    commands:
+      - extras
+      - versions
+      - java
+
+  - name: Install Apps with Scoop
+    type: command
+    depends_on:
+      - Add a Scoop bucket
+    prefix: scoop install
+    commands:
+      - git
+      - curl
+      - wget
+      - 7zip
+      - jq
+      - gradle
+      - ngrok
+      - python
+      - ffmpeg
+      - go
+      - extras/vscode
+      - extras/idea-ultimate
+      - extras/googlechrome
+      - extras/discord
+      - extras/slack
+      - java/graalvm21
+
+  - name: Tenki
+    type: file
+    filename: tenki.bat
+    text: |
+      @echo off
+      curl.exe -4 http://wttr.in/kyoto
