@@ -35,17 +35,15 @@ object ProcessorManager {
     fun runAll() = runBlocking {
         if (managerState == State.RUNNING) this.cancel()
 
-        val jobs = mutableListOf<Job>()
         processors.filter { it.parents.isEmpty() }
-            .forEach {
-                val j = launch {
+            .map {
+                launch {
                     states[it] = State.RUNNING
                     it.run()
                     states[it] = State.DONE
                 }
-                jobs.add(j)
-            }
-        jobs.joinAll()
+            }.joinAll()
+
         managerState = State.RUNNING
     }
 }
