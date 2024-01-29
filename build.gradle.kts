@@ -13,6 +13,8 @@ repositories {
 dependencies {
     implementation("com.github.ajalt.clikt:clikt:4.2.2")
     implementation("com.charleskorn.kaml:kaml:0.57.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.8.0-RC2")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:1.8.0-RC2")
     testImplementation("org.jetbrains.kotlin:kotlin-test")
 }
 
