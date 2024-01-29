@@ -1,63 +1,65 @@
 package io.github.rokuosan.meset.processor
 
 import io.github.rokuosan.meset.schema.Task
+import kotlinx.coroutines.*
 
 object ProcessorManager {
-    private val processors: MutableList<Processor> = mutableListOf()
+    private val processors: MutableSet<Processor> = mutableSetOf()
 
-    /**
-     * Subscribe all tasks to processor manager
-     *
-     * @param tasks List of tasks
-     */
-    fun subscribe(tasks: List<Task>, parents: List<Processor> = emptyList()) {
-        if (tasks.isEmpty()) return
+    private enum class State {
+        READY,
+        RUNNING,
+        DONE
+    }
 
-        val targets = mutableListOf<Task>()
-        val children = mutableListOf<Task>()
-        tasks.forEach {
-            if (it.dependsOn.isNullOrEmpty()) {
-                targets.add(it)
-            } else {
-                children.add(it)
+    private var managerState = State.READY
+    private val states = mutableMapOf<Processor, State>()
+
+    fun subscribe(tasks: List<Task>) {
+        val ps = tasks.map { it.toProcessor() }
+
+        ps.forEach { p ->
+            val children = ps.filter { it.task.dependsOn?.contains(p.task.name) == true }
+            p.children.addAll(children)
+            children.forEach { c ->
+                c.parents += p
             }
-        }
-        for (target in targets) {
-            val c = mutableListOf<Task>()
-            for (child in children) {
-                if (child.dependsOn?.contains(target.name) == true) {
-                    c.add(child)
-                }
-            }
-            for (child in c){
-                children.remove(child)
-                children.add(
-                    when (child) {
-                        is Task.Command -> child.copy(dependsOn = child.dependsOn?.filter { it != target.name })
-                        is Task.File -> child.copy(dependsOn = child.dependsOn?.filter { it != target.name })
-                    }
-                )
-            }
-            processors.add(target.toProcessor(parents = parents, children = c.map { it.toProcessor() }))
+            states[p] = State.READY
         }
 
-        subscribe(children, targets.map { it.toProcessor() })
+        processors.addAll(ps)
     }
 
     fun find(name: String): Processor? = processors.find { it.task.name == name }
 
-    fun runAll() {
-        processors
-            .filter { it.parents.isEmpty() }
+    fun runAll() = runBlocking {
+        if (managerState == State.RUNNING) this.cancel()
+
+        val jobs = mutableListOf<Job>()
+        processors.filter { it.parents.isEmpty() }
             .forEach {
-            it.run()
-        }
+                val j = launch {
+                    states[it] = State.RUNNING
+                    it.run()
+                    states[it] = State.DONE
+                }
+                jobs.add(j)
+            }
+        jobs.joinAll()
+        managerState = State.RUNNING
     }
 }
 
-fun Task.toProcessor(parents: List<Processor> = emptyList(), children: List<Processor> = emptyList()): Processor {
+fun Task.toProcessor(
+    parents: MutableSet<Processor> = mutableSetOf(),
+    children: MutableSet<Processor> = mutableSetOf()
+): Processor {
     return when (this) {
         is Task.Command -> CommandProcessor(this, parents, children)
         is Task.File -> FileProcessor(this, parents, children)
     }
+}
+
+fun Processor.toS(): String {
+    return "Processor(task=${this.task.name}, parents=${this.parents.joinToString(", ", transform = { it.task.name })}, children=${this.children.joinToString(", ", transform = { it.task.name })})"
 }
